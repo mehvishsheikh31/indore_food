@@ -1,0 +1,42 @@
+[
+    {
+        "name": "Joshi Dahi Bada House",
+        "location": "Sarafa Bazaar",
+        "coordinates": [22.7157, 75.8540],
+        "specialty": "Flying Dahi Wada, Bhutte ka Kees",
+        "best_time": "8:00 PM - 11:00 PM",
+        "vibe": "Theatrical and Busy"
+    },
+    {
+        "name": "Vijay Chaat House",
+        "location": "Chappan Dukan",
+        "coordinates": [22.7244, 75.8839],
+        "specialty": "Khopra Patties, Batla Kachori",
+        "best_time": "12:00 PM - 9:00 PM",
+        "vibe": "Family Friendly"
+    },
+    {
+        "name": "Johnny Hot Dog",
+        "location": "Chappan Dukan",
+        "coordinates": [22.7246, 75.8837],
+        "specialty": "Egg Benjo, Mutton Hot Dog",
+        "best_time": "4:00 PM - 10:00 PM",
+        "vibe": "Youthful and Quick"
+    },
+    {
+        "name": "Nagori ki Shikanji",
+        "location": "Sarafa Bazaar",
+        "coordinates": [22.7155, 75.8538],
+        "specialty": "Indori Shikanji (Milk-based)",
+        "best_time": "9:00 PM - 1:00 AM",
+        "vibe": "Dessert Paradise"
+    },
+    {
+        "name": "Jai Bhole Jalebi Bhandar",
+        "location": "Sarafa Bazaar",
+        "coordinates": [22.7158, 75.8542],
+        "specialty": "Jaleba (Giant Jalebi)",
+        "best_time": "9:00 PM - 2:00 AM",
+        "vibe": "Street Side Indulgence"
+    }
+]
