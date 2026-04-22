@@ -1,42 +1,82 @@
 [
-    {
-        "name": "Joshi Dahi Bada House",
-        "location": "Sarafa Bazaar",
-        "coordinates": [22.7157, 75.8540],
-        "specialty": "Flying Dahi Wada, Bhutte ka Kees",
-        "best_time": "8:00 PM - 11:00 PM",
-        "vibe": "Theatrical and Busy"
-    },
-    {
-        "name": "Vijay Chaat House",
-        "location": "Chappan Dukan",
-        "coordinates": [22.7244, 75.8839],
-        "specialty": "Khopra Patties, Batla Kachori",
-        "best_time": "12:00 PM - 9:00 PM",
-        "vibe": "Family Friendly"
-    },
-    {
-        "name": "Johnny Hot Dog",
-        "location": "Chappan Dukan",
-        "coordinates": [22.7246, 75.8837],
-        "specialty": "Egg Benjo, Mutton Hot Dog",
-        "best_time": "4:00 PM - 10:00 PM",
-        "vibe": "Youthful and Quick"
-    },
-    {
-        "name": "Nagori ki Shikanji",
-        "location": "Sarafa Bazaar",
-        "coordinates": [22.7155, 75.8538],
-        "specialty": "Indori Shikanji (Milk-based)",
-        "best_time": "9:00 PM - 1:00 AM",
-        "vibe": "Dessert Paradise"
-    },
-    {
-        "name": "Jai Bhole Jalebi Bhandar",
-        "location": "Sarafa Bazaar",
-        "coordinates": [22.7158, 75.8542],
-        "specialty": "Jaleba (Giant Jalebi)",
-        "best_time": "9:00 PM - 2:00 AM",
-        "vibe": "Street Side Indulgence"
-    }
+  {
+    "name": "Joshi Dahi Bada House",
+    "location": "Sarafa",
+    "coordinates": [22.7157, 75.8540],
+    "specialty": "Flying Dahi Wada",
+    "vibe": "Theatrical",
+    "is_pure_veg": true
+  },
+  {
+    "name": "Johny Hot Dog",
+    "location": "Chappan Dukan",
+    "coordinates": [22.7246, 75.8837],
+    "specialty": "Egg Benjo",
+    "vibe": "Quick Service",
+    "is_pure_veg": false
+  },
+  {
+    "name": "Vijay Chaat House",
+    "location": "Chappan Dukan",
+    "coordinates": [22.7244, 75.8839],
+    "specialty": "Khopra Patties",
+    "vibe": "Family",
+    "is_pure_veg": true
+  },
+  {
+    "name": "Prashant Nashta Corner",
+    "location": "Rajwada",
+    "coordinates": [22.7187, 75.8554],
+    "specialty": "Poha Jalebi",
+    "vibe": "Traditional",
+    "is_pure_veg": true
+  },
+  {
+    "name": "Nagori Shikanji",
+    "location": "Sarafa",
+    "coordinates": [22.7155, 75.8538],
+    "specialty": "Indori Shikanji",
+    "vibe": "Dessert",
+    "is_pure_veg": true
+  },
+  {
+    "name": "Guru Kripa",
+    "location": "Sarwate",
+    "coordinates": [22.7153, 75.8681],
+    "specialty": "Sev Tamatar",
+    "vibe": "Legendary",
+    "is_pure_veg": true
+  },
+  {
+    "name": "Ghamandi Lassi",
+    "location": "Sarwate",
+    "coordinates": [22.7170, 75.8670],
+    "specialty": "Lassi",
+    "vibe": "Busy",
+    "is_pure_veg": true
+  },
+  {
+    "name": "Lal Balti Kachori",
+    "location": "Rajendra Nagar",
+    "coordinates": [22.6853, 75.8354],
+    "specialty": "Aloo Kachori",
+    "vibe": "Spicy",
+    "is_pure_veg": true
+  },
+  {
+    "name": "Head Sahab Ke Pohe",
+    "location": "Palasia",
+    "coordinates": [22.7240, 75.8880],
+    "specialty": "Usal Poha",
+    "vibe": "Local Hub",
+    "is_pure_veg": true
+  },
+  {
+    "name": "Ravi Alpahar",
+    "location": "Anand Bazar",
+    "coordinates": [22.7305, 75.8950],
+    "specialty": "Sabudana Khichdi",
+    "vibe": "Morning Rush",
+    "is_pure_veg": true
+  }
 ]
