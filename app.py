@@ -29,17 +29,38 @@ u_lon = st.sidebar.number_input("Longitude", value=75.8577)
 
 search = st.sidebar.text_input("Search food", "")
 
-# ---------------- FILTER ----------------
-def filter_data(vendors, search):
-    if not search:
-        return vendors
-    return [
-        v for v in vendors
-        if search.lower() in v.get("name", "").lower()
-        or search.lower() in v.get("specialty", "").lower()
-    ]
+veg_filter = st.sidebar.selectbox(
+    "Veg Preference",
+    ["All", "Veg Only", "Non-Veg"]
+)
 
-filtered = filter_data(vendors, search)
+price_filter = st.sidebar.selectbox(
+    "Price",
+    ["All", "low", "medium"]
+)
+
+# ---------------- FILTER FUNCTION ----------------
+def filter_data(vendors, search, veg_filter, price_filter):
+    result = vendors
+
+    if search:
+        result = [
+            v for v in result
+            if search.lower() in v.get("name", "").lower()
+            or search.lower() in v.get("specialty", "").lower()
+        ]
+
+    if veg_filter == "Veg Only":
+        result = [v for v in result if v.get("is_pure_veg")]
+    elif veg_filter == "Non-Veg":
+        result = [v for v in result if not v.get("is_pure_veg")]
+
+    if price_filter != "All":
+        result = [v for v in result if v.get("price_range") == price_filter]
+
+    return result
+
+filtered = filter_data(vendors, search, veg_filter, price_filter)
 st.sidebar.write(f"{len(filtered)} results")
 
 # ---------------- AI SECTION ----------------
@@ -47,31 +68,55 @@ st.subheader("🤖 AI Recommendation")
 
 query = st.text_input("What do you want to eat?")
 
-# Button click → store results
 if st.button("Get Recommendation"):
     if not query.strip():
-        st.warning("Please enter something to search")
+        st.warning("Please enter something")
+    elif len(filtered) == 0:
+        st.error("No vendors match current filters")
     else:
         response, top3 = get_recommendation_with_distance(
             u_lat, u_lon, query, filtered
         )
 
-        # STORE in session
         st.session_state.response = response
         st.session_state.top_vendors = top3
 
-# ---------------- DISPLAY STORED RESULTS ----------------
+# ---------------- DISPLAY RESULTS ----------------
 if "response" in st.session_state:
     st.success(st.session_state.response)
 
-    st.subheader("Top Matches")
+    st.subheader("🔥 Top Recommendations")
 
-    for v in st.session_state.top_vendors:
-        st.markdown(f"""
-        **{v['name']}**
-        - {v['specialty']}
-        - {v['dist']:.2f} km
-        """)
+    top_vendors = st.session_state.top_vendors
+
+    for i, v in enumerate(top_vendors):
+        with st.container():
+            if i == 0:
+                st.markdown("### 🏆 Best Choice")
+
+            col1, col2 = st.columns([3, 1])
+
+            with col1:
+                st.markdown(f"**{v['name']}**")
+                st.write(f"🍽 {v['specialty']}")
+                st.write(f"📍 {v['location']}")
+
+            with col2:
+                st.metric("Distance", f"{v['dist']:.2f} km")
+
+            # Tags
+            tags = []
+            if v.get("is_pure_veg"):
+                tags.append("Veg")
+            else:
+                tags.append("Non-Veg")
+
+            if v.get("price_range"):
+                tags.append(v["price_range"].capitalize())
+
+            st.caption(" | ".join(tags))
+
+            st.divider()
 
 # ---------------- MAP ----------------
 st.subheader("🗺️ Live Food Map")
