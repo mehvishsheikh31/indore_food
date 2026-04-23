@@ -1,81 +1,179 @@
+"""
+food_agent.py – Scoring + Groq recommendation engine
+"""
 import math
-from config import get_groq_client
+from typing import List, Dict, Tuple
+from config import get_groq_client, GROQ_MODEL, TOP_N
 
-def calculate_distance(lat1, lon1, lat2, lon2):
+
+# ──────────────────────────────────────────────
+# Distance
+# ──────────────────────────────────────────────
+def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Returns distance in km between two GPS points."""
     R = 6371.0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
-    dlambda = math.radians(lon2 - lon1)
-
-    a = math.sin(dphi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda/2)**2
+    dlam = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlam / 2) ** 2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def score_vendor(v, query, user_lat, user_lon):
-    score = 0
-    query = query.lower()
+# ──────────────────────────────────────────────
+# Scoring
+# ──────────────────────────────────────────────
+def _score_vendor(v: Dict, query: str, user_lat: float, user_lon: float) -> float:
+    """
+    Multi-factor scoring:
+      - Proximity        (max 20 pts, drops linearly over 10 km)
+      - Specialty match  (15 pts exact, 8 pts partial)
+      - Taste profile    (10 pts per matching taste word)
+      - Best-time match  (8 pts per matching time word)
+      - Famous boost     (5 pts)
+      - Rating           (up to 5 pts)
+      - Tags match       (5 pts per matching tag word)
+    """
+    q = query.lower()
+    lat2, lon2 = v["coordinates"]
+    dist = haversine(user_lat, user_lon, lat2, lon2)
+    v["dist"] = round(dist, 3)
 
-    # Distance
-    dist = calculate_distance(user_lat, user_lon, v['coordinates'][0], v['coordinates'][1])
-    v['dist'] = dist
-    score += max(0, 15 - dist)
+    score = 0.0
 
-    # Specialty match
-    if query in v.get("specialty", "").lower():
+    # Proximity (linear decay: 20 pts at 0 km → 0 pts at 10 km)
+    score += max(0, 20 - dist * 2)
+
+    # Specialty
+    specialty = v.get("specialty", "").lower()
+    if q in specialty:
         score += 15
+    elif any(word in specialty for word in q.split()):
+        score += 8
 
-    # Taste match
-    for t in v.get("taste_profile", []):
-        if t in query:
+    # Taste profile
+    for taste in v.get("taste_profile", []):
+        if taste.lower() in q:
             score += 10
 
-    # Time match
+    # Best time
     for t in v.get("best_time", []):
-        if t in query:
+        if t.lower() in q:
             score += 8
 
-    # Famous boost
+    # Famous
     if v.get("is_famous"):
         score += 5
+
+    # Rating boost (out of 5 → map to 0-5)
+    rating = v.get("rating", 0)
+    score += rating
+
+    # Tags
+    for tag in v.get("tags", []):
+        if tag.lower() in q:
+            score += 5
 
     return score
 
 
-def get_recommendation_with_distance(user_lat, user_lon, user_query, vendors):
-    # Score all vendors
+def rank_vendors(
+    vendors: List[Dict],
+    query: str,
+    user_lat: float,
+    user_lon: float,
+    top_n: int = TOP_N,
+) -> List[Dict]:
+    """Returns a copy of top_n vendors sorted by score (desc)."""
+    scored = []
     for v in vendors:
-        v['score'] = score_vendor(v, user_query, user_lat, user_lon)
+        vc = dict(v)           # don't mutate original
+        vc["score"] = _score_vendor(vc, query, user_lat, user_lon)
+        scored.append(vc)
+    return sorted(scored, key=lambda x: x["score"], reverse=True)[:top_n]
 
-    ranked = sorted(vendors, key=lambda x: x['score'], reverse=True)
 
-    top3 = ranked[:3]
-    best = top3[0]
+# ──────────────────────────────────────────────
+# AI Recommendation
+# ──────────────────────────────────────────────
+def build_prompt(query: str, top_vendors: List[Dict], user_lat: float, user_lon: float) -> str:
+    lines = []
+    for i, v in enumerate(top_vendors):
+        badge = "🏆 Top Pick" if i == 0 else f"#{i+1}"
+        lines.append(
+            f"{badge} | {v['name']} ({v['location']}) | {v['specialty']} "
+            f"| {v['dist']:.2f} km | Rating {v.get('rating', 'N/A')}"
+        )
+    context = "\n".join(lines)
 
-    context = "\n".join([
-        f"{v['name']} - {v['specialty']} ({v['dist']:.2f} km)"
-        for v in top3
-    ])
+    return f"""You are a passionate Indore street food expert — knowledgeable, warm, and a little cheeky.
 
-    client = get_groq_client()
+User craving: "{query}"
+User coordinates: {user_lat:.4f}, {user_lon:.4f}
 
-    prompt = f"""
-You are a smart Indore food expert.
-
-User craving: {user_query}
-
-Top options:
+Top matching spots:
 {context}
 
-Rules:
-- Recommend ONLY 1 best option
-- Explain based on distance + taste match
-- Keep answer short (4-5 lines)
-- Use light local tone (not cringe)
-"""
+Instructions:
+- Recommend the single BEST match. Mention its name clearly.
+- In 4-6 lines explain WHY it suits the craving (taste, distance, vibe).
+- Mention one must-try dish.
+- Use a friendly, local Indori tone — English only, no cringe transliteration.
+- End with a one-liner hype sentence.
 
+Do NOT list all options. Focus on the BEST one only."""
+
+
+def get_recommendation(
+    user_lat: float,
+    user_lon: float,
+    query: str,
+    vendors: List[Dict],
+) -> Tuple[str, List[Dict]]:
+    """
+    Returns (ai_text, top_vendors_list).
+    top_vendors already have 'dist' and 'score' populated.
+    """
+    top = rank_vendors(vendors, query, user_lat, user_lon)
+    prompt = build_prompt(query, top, user_lat, user_lon)
+
+    client = get_groq_client()
     response = client.chat.completions.create(
         messages=[{"role": "user", "content": prompt}],
-        model="llama-3.1-8b-instant",
+        model=GROQ_MODEL,
+        temperature=0.7,
+        max_tokens=300,
     )
+    text = response.choices[0].message.content.strip()
+    return text, top
 
-    return response.choices[0].message.content, top3
+
+def stream_recommendation(
+    user_lat: float,
+    user_lon: float,
+    query: str,
+    vendors: List[Dict],
+):
+    """
+    Generator that yields (chunk_text, top_vendors | None).
+    top_vendors is returned in the FIRST yield as second element,
+    then subsequent yields have None as second element.
+    """
+    top = rank_vendors(vendors, query, user_lat, user_lon)
+    prompt = build_prompt(query, top, user_lat, user_lon)
+
+    client = get_groq_client()
+    with client.chat.completions.stream(
+        messages=[{"role": "user", "content": prompt}],
+        model=GROQ_MODEL,
+        temperature=0.7,
+        max_tokens=300,
+    ) as stream:
+        first = True
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content or ""
+            if delta:
+                if first:
+                    yield delta, top
+                    first = False
+                else:
+                    yield delta, None
