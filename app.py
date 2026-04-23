@@ -7,10 +7,11 @@ import json
 import time
 import streamlit as st
 from streamlit_folium import st_folium
-
 from scripts.food_agent import get_recommendation, rank_vendors
 from scripts.map_generator import generate_map
+from scripts.gps_component import gps_location_widget
 from config import DEFAULT_LAT, DEFAULT_LON, APP_TITLE, APP_ICON
+
 
 # ─────────────────────────────────────────────────────────
 # Page config
@@ -98,13 +99,9 @@ with st.sidebar:
     st.markdown(f"## {APP_ICON} {APP_TITLE}")
     st.caption("Your AI-powered Indore food guide")
     st.divider()
-
+     
     st.markdown("### 📍 Your Location")
-    col_lat, col_lon = st.columns(2)
-    with col_lat:
-        u_lat = st.number_input("Latitude", value=DEFAULT_LAT, format="%.4f")
-    with col_lon:
-        u_lon = st.number_input("Longitude", value=DEFAULT_LON, format="%.4f")
+    u_lat, u_lon, gps_active = gps_location_widget()
 
     st.markdown("### 🔍 Filters")
     search_text = st.text_input("Search by name / dish", placeholder="e.g. poha, biryani")
