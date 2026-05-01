@@ -161,8 +161,8 @@ with st.sidebar:
 st.markdown(f"# {APP_ICON} Indore Food Intelligence")
 st.caption("AI-powered street food guide for the city of food lovers")
 
-tab_ai, tab_explore, tab_map, tab_history = st.tabs([
-    "🤖 AI Recommend", "🧭 Explore", "🗺️ Map", "📜 History"
+tab_ai, tab_explore, tab_map, tab_history, tab_share = st.tabs([
+    "🤖 AI Recommend", "🧭 Explore", "🗺️ Map", "📜 History", "📤 Share"
 ])
 
 # ═══════════════════════════════════════════════════════
@@ -339,3 +339,81 @@ with tab_history:
                     if st.button("Use this search again", key=f"rerun_{i}"):
                         st.session_state["_quick_query"] = item["query"]
                         st.rerun()
+
+# ═══════════════════════════════════════════════════════
+# TAB 5 – Share / Export
+# ═══════════════════════════════════════════════════════
+with tab_share:
+    st.subheader("📤 Share Your Food Picks")
+
+    if not st.session_state.top_vendors:
+        st.info("Run an AI recommendation first, then come here to share your picks!")
+    else:
+        query = st.session_state.last_query
+
+        # ── Build shareable text ──
+        lines = [f"🍴 Indore Food Picks — \"{query}\"", ""]
+        for i, v in enumerate(st.session_state.top_vendors):
+            rank = "🏆" if i == 0 else f"#{i+1}"
+            veg  = "🟢 Veg" if v.get("is_pure_veg") else "🔴 Non-Veg"
+            lines.append(f"{rank} {v['name']}")
+            lines.append(f"   📍 {v['location']}  |  🍽 {v['specialty']}")
+            lines.append(f"   ⭐ {v.get('rating','N/A')}  |  📏 {v['dist']:.2f} km  |  {veg}")
+            if v.get("must_try"):
+                lines.append(f"   ✨ Must try: {v['must_try']}")
+            lines.append("")
+
+        lines.append("— via Indore Food Intelligence 🍴")
+        share_text = "\n".join(lines)
+
+        # ── Preview ──
+        st.markdown("**Preview:**")
+        st.code(share_text, language=None)
+
+        # ── Copy button (downloads as .txt since Streamlit has no clipboard API) ──
+        st.download_button(
+            label="⬇️ Download as .txt",
+            data=share_text,
+            file_name=f"indore_food_{query[:20].replace(' ','_')}.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+
+        # ── WhatsApp share link ──
+        import urllib.parse
+        wa_text = urllib.parse.quote(share_text)
+        wa_url  = f"https://wa.me/?text={wa_text}"
+        st.markdown(
+            f'<a href="{wa_url}" target="_blank">'
+            f'<button style="background:#25D366;color:white;border:none;'
+            f'padding:10px 20px;border-radius:8px;font-size:15px;cursor:pointer;width:100%">'
+            f'💬 Share on WhatsApp</button></a>',
+            unsafe_allow_html=True,
+        )
+
+        st.divider()
+
+        # ── Export all filtered vendors as CSV ──
+        st.markdown("**Export full vendor list (filtered) as CSV:**")
+        import csv, io
+        buf = io.StringIO()
+        fields = ["name", "location", "specialty", "rating", "price_range",
+                  "is_pure_veg", "is_famous", "area", "dist"]
+        writer = csv.DictWriter(buf, fieldnames=fields, extrasaction="ignore")
+        writer.writeheader()
+
+        # Re-compute dist for filtered vendors
+        from scripts.food_agent import haversine
+        for v in filtered_vendors:
+            vc = dict(v)
+            lat2, lon2 = vc["coordinates"]
+            vc["dist"] = round(haversine(u_lat, u_lon, lat2, lon2), 2)
+            writer.writerow(vc)
+
+        st.download_button(
+            label="⬇️ Download vendors as CSV",
+            data=buf.getvalue(),
+            file_name="indore_vendors_filtered.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
