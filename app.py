@@ -348,6 +348,7 @@ def _init_state():
         "top_vendors": None,
         "history": [],
         "last_query": "",
+        "agent_trace": None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -531,18 +532,22 @@ with tab_ai:
         elif not filtered_vendors:
             st.error("No vendors match your filters. Try relaxing them in the sidebar.")
         else:
-            with st.spinner("Hunting down the perfect spot for you... 🔍"):
+            with st.spinner("Agent is thinking: parsing craving, scoring, deciding... 🔍"):
                 try:
-                    ai_text, top = get_recommendation(u_lat, u_lon, query, filtered_vendors)
+                    ai_text, top, agent_trace = get_recommendation(
+                        u_lat, u_lon, query, filtered_vendors, all_vendors=vendors_all
+                    )
                     # Limit to user-selected top_n
                     top = top[:top_n]
                     st.session_state.ai_response = ai_text
                     st.session_state.top_vendors  = top
                     st.session_state.last_query   = query
+                    st.session_state.agent_trace  = agent_trace
                     st.session_state.history.insert(0, {
                         "query": query,
                         "response": ai_text,
                         "top_vendors": top,
+                        "agent_trace": agent_trace,
                     })
                     if len(st.session_state.history) > 20:
                         st.session_state.history = st.session_state.history[:20]
@@ -561,6 +566,13 @@ with tab_ai:
         st.markdown('<div class="section-heading">🔥 Top Picks for You</div>', unsafe_allow_html=True)
         for i, v in enumerate(st.session_state.top_vendors):
             render_vendor_card(v, i)
+
+        if st.session_state.agent_trace:
+            with st.expander("🧠 See how the agent decided this"):
+                for step in st.session_state.agent_trace:
+                    st.markdown(f"**{step['step']}**")
+                    if step.get("detail") is not None:
+                        st.json(step["detail"]) if isinstance(step["detail"], dict) else st.caption(step["detail"])
     else:
         st.markdown("""
         <div class="empty-state">
