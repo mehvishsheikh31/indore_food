@@ -349,12 +349,22 @@ def _init_state():
         "history": [],
         "last_query": "",
         "agent_trace": None,
+        "main_query": "",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
 _init_state()
+
+# Apply any pending query (from a quick-pick or history re-run click) to the
+# search box's own state key BEFORE that widget is instantiated anywhere in
+# this run. All tab bodies execute every pass, in top-to-bottom script
+# order, so a button inside a later tab cannot write directly to an
+# earlier widget's key in the same run — it has to stage the value here
+# first and trigger a rerun.
+if st.session_state.get("_pending_query") is not None:
+    st.session_state["main_query"] = st.session_state.pop("_pending_query")
 
 # ─────────────────────────────────────────────────────────
 # Sidebar – Filters & Location
@@ -513,11 +523,16 @@ with tab_ai:
     cols = st.columns(len(quick_picks))
     for i, (em, label) in enumerate(quick_picks):
         if cols[i].button(f"{em} {label}", use_container_width=True, key=f"qp_{i}"):
-            st.session_state["_quick_query"] = label
+            # Stage the value and rerun; it's applied to the search box's
+            # state key at the top of the script, before the widget is
+            # created. (Passing `value=` to the widget instead is a no-op
+            # once a keyed widget has already rendered once — that was the
+            # original bug that made every quick-pick button do nothing.)
+            st.session_state["_pending_query"] = label
+            st.rerun()
 
     query = st.text_input(
         "Describe your craving:",
-        value=st.session_state.get("_quick_query", ""),
         placeholder="e.g. something tangy and spicy for evening near Sarafa...",
         key="main_query",
     )
@@ -551,7 +566,6 @@ with tab_ai:
                     })
                     if len(st.session_state.history) > 20:
                         st.session_state.history = st.session_state.history[:20]
-                    st.session_state.pop("_quick_query", None)
                 except Exception as e:
                     st.error(f"AI error: {e}")
 
@@ -706,7 +720,7 @@ with tab_history:
                         f"({best.get('dist', 0):.2f} km) ⭐ {best.get('rating', 'N/A')}"
                     )
                     if col_btn.button("🔁 Re-run", key=f"rerun_{i}", use_container_width=True):
-                        st.session_state["_quick_query"] = item["query"]
+                        st.session_state["_pending_query"] = item["query"]
                         st.rerun()
 
 # ═══════════════════════════════════════════════════════
