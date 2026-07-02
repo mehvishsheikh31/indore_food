@@ -23,7 +23,7 @@
 
 ## 🌟 What Is This?
 
-**Indore Food Intelligence** is a geospatial AI agent that helps you discover the best street food vendors in Indore, Madhya Pradesh — instantly. Describe your craving in plain language and the app finds the perfect spot based on your **location**, **mood**, **budget**, and **time of day**.
+**Indore Food Intelligence** is a geospatial **agentic AI** app that helps you discover the best street food vendors in Indore, Madhya Pradesh — instantly. Describe your craving in plain language and the app finds the perfect spot based on your **location**, **mood**, **budget**, and **time of day**.
 
 No generic lists. No sponsored results. Just a local food-obsessed AI that actually gets Indori culture.
 
@@ -36,20 +36,23 @@ No generic lists. No sponsored results. Just a local food-obsessed AI that actua
 | 🤖 **AI Recommendation** | Describe your craving naturally — the LLM picks the single best match and explains why |
 | 🧭 **Explore Mode** | Browse all vendors in a filterable, sortable card grid |
 | 🗺️ **Live Map** | Interactive Folium map with ranked markers, your location pin & route lines |
-| 📜 **Search History** | Last 10 searches saved in session — re-run any past query in one click |
+| 📜 **Search History** | Recent searches saved in session — re-run any past query in one click |
 | 📤 **Share & Export** | Copy picks as text, share via WhatsApp, or download filtered vendors as CSV |
 | 📍 **GPS Support** | Auto-detects your location for distance-aware recommendations |
-| 🔍 **Smart Filters** | Filter by area, veg/non-veg, price range, and free-text search |
+| 🔍 **Smart Filters** | Filter by area, veg/non-veg, price range, min rating, and free-text search |
+| ⚡ **One-tap quick picks** | Poha, Spicy, Late Night, etc. — tap to instantly fill and search |
 
 ---
 
-## 🧠 How the AI Works
+## 🧠 How the AI Agent Works
+
+This isn't a single LLM call that narrates a pre-picked winner — it's a real multi-step agent loop:
 
 ```
 Your Craving (natural language)
         │
         ▼
- Intent Detection
+ 1. PERCEIVE — LLM parses free text into structured intent
   ┌─────────────────────────────┐
   │  Time: morning / evening …  │
   │  Mood: spicy / sweet / …    │
@@ -57,7 +60,7 @@ Your Craving (natural language)
   └─────────────────────────────┘
         │
         ▼
-  Multi-Factor Scoring (per vendor)
+ 2. ACT — deterministic multi-factor scoring (per vendor)
   ┌──────────────────────────────────────┐
   │  📍 Proximity          → max 20 pts  │
   │  🍽  Specialty match   → max 15 pts  │
@@ -69,30 +72,38 @@ Your Craving (natural language)
   └──────────────────────────────────────┘
         │
         ▼
-  Top 5 Vendors → Groq LLaMA 3.1 Prompt
+ 3. DECIDE — LLM looks at top candidates and picks the
+    winner itself, with a confidence score
         │
         ▼
-  AI Narrative Recommendation 🎉
+ 4. REFLECT — if confidence is low, the agent autonomously
+    widens the search pool and re-runs steps 2-3 (up to 1 retry)
+        │
+        ▼
+ 5. RESPOND — LLM writes the final friendly recommendation
+    for the vendor it chose 🎉
 ```
+
+Every step is logged to an `agent_trace`, visible in the app under **"🧠 See how the agent decided this."**
 
 ---
 
 ## 🗂️ Project Structure
 
 ```
-indore_food/
+indore_food-main/
 ├── app.py                  # Streamlit UI — all tabs & session state
-├── config.py               # API keys, constants, Groq client init
-├── build_dataset.py        # Script to build/extend vendor JSON
-├── requirements.txt        # Python dependencies
+├── config.py                # API keys, constants, Groq client init
+├── build_dataset.py         # Script to build/extend vendor JSON
+├── requirements.txt         # Python dependencies
 │
 ├── data/
-│   └── indore_vendors.json # 20 vendors across 8 Indore areas
+│   └── indore_vendors.json  # 40 vendors across 10 Indore areas
 │
 └── scripts/
-    ├── food_agent.py       # Scoring engine + Groq recommendation
-    ├── map_generator.py    # Folium map builder
-    └── gps_component.py    # Browser GPS widget
+    ├── food_agent.py        # Agent loop: perceive → act → decide → reflect → respond
+    ├── map_generator.py     # Folium map builder
+    └── gps_component.py     # Browser GPS widget
 ```
 
 ---
@@ -134,18 +145,20 @@ Open `http://localhost:8501` in your browser. 🎉
 
 ## 🗺️ Vendor Coverage
 
-**20 vendors** across **8 iconic Indore food zones:**
+**40 vendors** across **10 Indore food zones:**
 
 | Area | Known For |
 |---|---|
-| 🌙 **Sarafa Bazaar** | Late-night street food paradise |
+| 🌙 **Sarafa** | Late-night street food paradise |
 | 🏪 **Chappan Dukan** | 56 shops, the ultimate food street |
-| 🍽 **Anand Bazar** | Breakfast & morning specials |
+| 🍽 **Anand Bazaar** | Breakfast & morning specials |
 | 🛍 **Vijay Nagar** | Modern cafes + quick bites |
 | 🏰 **Rajwada** | Heritage area, old-school flavours |
 | 🌿 **Palasia** | Veg-heavy, family-friendly spots |
 | 🚉 **Sarwate** | Budget street food near the bus stand |
 | 🏡 **Rajendra Nagar** | Local neighbourhood gems |
+| 🏘 **LIG Colony** | Residential-area local favourites |
+| 🕌 **Chhatripura** | Old-city classic vendors |
 
 ---
 
@@ -154,9 +167,9 @@ Open `http://localhost:8501` in your browser. 🎉
 | Layer | Technology |
 |---|---|
 | **Frontend** | Streamlit |
-| **AI / LLM** | Groq API — LLaMA 3.1 8B Instant |
+| **AI / LLM** | Groq API — LLaMA 3.1 8B Instant (agentic loop, not a single call) |
 | **Maps** | Folium + streamlit-folium |
-| **Geolocation** | Browser GPS via Streamlit component |
+| **Geolocation** | Browser GPS via `streamlit-js-eval` |
 | **Data** | Hand-curated JSON dataset |
 | **Language** | Python 3.10+ |
 
@@ -170,7 +183,19 @@ streamlit-folium>=0.18.0
 folium>=0.16.0
 groq>=0.9.0
 python-dotenv>=1.0.0
+streamlit-js-eval>=0.1.7
 ```
+
+---
+
+## 🩹 Changelog / Fixes
+
+**Latest update — click-through & stability fixes:**
+
+- 🐛 **Fixed:** Quick-pick buttons (Poha, Spicy, Late Night, etc.) didn't fill the search box — a Streamlit widget state-timing bug meant every click was silently ignored.
+- 🐛 **Fixed:** The History tab's "🔁 Re-run" button crashed the app with a `StreamlitAPIException` (writing to a widget's state after it had already rendered in the same pass).
+- 🐛 **Fixed:** `streamlit-js-eval` was used by `gps_component.py` but missing from `requirements.txt`, so GPS detection would fail on a fresh install.
+- ✅ Verified end-to-end with Streamlit's `AppTest` harness: every button, tab, filter, slider, and the full agent loop (Perceive → Act → Decide → Reflect → Respond) now runs without exceptions.
 
 ---
 
